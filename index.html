@@ -1,0 +1,3655 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Analisador de Planilhas</title>
+
+<!-- Bibliotecas -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+<style>
+
+:root{
+    --bg:#f4f7fb;
+    --card:#ffffff;
+    --text:#172033;
+    --muted:#64748b;
+    --primary:#2563eb;
+    --primary-dark:#1d4ed8;
+    --border:#dbe3ef;
+    --success:#16a34a;
+    --warning:#d97706;
+    --danger:#dc2626;
+    --purple:#7c3aed;
+    --shadow:0 8px 25px rgba(15,23,42,.07);
+}
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    font-family:Arial,Helvetica,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+}
+
+header{
+    background:linear-gradient(135deg,#1d4ed8,#2563eb,#3b82f6);
+    color:white;
+    padding:28px;
+}
+
+.header-content{
+    max-width:1500px;
+    margin:auto;
+}
+
+header h1{
+    margin:0 0 8px;
+    font-size:30px;
+}
+
+header p{
+    margin:0;
+    opacity:.9;
+}
+
+.container{
+    max-width:1500px;
+    margin:auto;
+    padding:25px;
+}
+
+.card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:20px;
+    margin-bottom:20px;
+    box-shadow:var(--shadow);
+}
+
+.card h2{
+    margin-top:0;
+    font-size:20px;
+}
+
+.upload-zone{
+    border:2px dashed #93c5fd;
+    background:#eff6ff;
+    border-radius:14px;
+    padding:45px 20px;
+    text-align:center;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.upload-zone:hover,
+.upload-zone.dragover{
+    background:#dbeafe;
+    border-color:var(--primary);
+}
+
+.upload-icon{
+    font-size:42px;
+    margin-bottom:10px;
+}
+
+.upload-zone strong{
+    display:block;
+    font-size:18px;
+    margin-bottom:7px;
+}
+
+.upload-zone span{
+    color:var(--muted);
+    font-size:14px;
+}
+
+input[type=file]{
+    display:none;
+}
+
+.actions{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:15px;
+}
+
+button{
+    border:0;
+    border-radius:8px;
+    padding:11px 16px;
+    cursor:pointer;
+    font-weight:600;
+    transition:.15s;
+}
+
+button:hover{
+    transform:translateY(-1px);
+}
+
+.btn-primary{
+    background:var(--primary);
+    color:white;
+}
+
+.btn-primary:hover{
+    background:var(--primary-dark);
+}
+
+.btn-secondary{
+    background:#e2e8f0;
+    color:#1e293b;
+}
+
+.btn-success{
+    background:var(--success);
+    color:white;
+}
+
+.btn-warning{
+    background:var(--warning);
+    color:white;
+}
+
+.btn-danger{
+    background:var(--danger);
+    color:white;
+}
+
+button:disabled{
+    opacity:.5;
+    cursor:not-allowed;
+    transform:none;
+}
+
+.progress-container{
+    margin-top:18px;
+    display:none;
+}
+
+.progress-bar{
+    width:100%;
+    height:12px;
+    background:#e2e8f0;
+    border-radius:20px;
+    overflow:hidden;
+}
+
+.progress-fill{
+    height:100%;
+    width:0%;
+    background:var(--primary);
+    transition:.2s;
+}
+
+.progress-text{
+    margin-top:7px;
+    font-size:13px;
+    color:var(--muted);
+}
+
+.file-list{
+    margin-top:18px;
+}
+
+.file-item{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:10px 12px;
+    border-bottom:1px solid var(--border);
+}
+
+.file-item:last-child{
+    border-bottom:0;
+}
+
+.file-name{
+    font-weight:600;
+}
+
+.file-meta{
+    color:var(--muted);
+    font-size:12px;
+}
+
+.remove-file{
+    background:#fee2e2;
+    color:#991b1b;
+    padding:5px 9px;
+}
+
+.stats{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:15px;
+}
+
+.stat{
+    background:white;
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:18px;
+    box-shadow:var(--shadow);
+}
+
+.stat-label{
+    color:var(--muted);
+    font-size:13px;
+    margin-bottom:8px;
+}
+
+.stat-value{
+    font-size:28px;
+    font-weight:700;
+}
+
+.stat.blue .stat-value{
+    color:var(--primary);
+}
+
+.stat.green .stat-value{
+    color:var(--success);
+}
+
+.stat.orange .stat-value{
+    color:var(--warning);
+}
+
+.stat.red .stat-value{
+    color:var(--danger);
+}
+
+.stat.purple .stat-value{
+    color:var(--purple);
+}
+
+.dashboard-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+}
+
+.chart-container{
+    position:relative;
+    height:330px;
+}
+
+.key-box{
+    background:#eff6ff;
+    border:1px solid #bfdbfe;
+    border-radius:10px;
+    padding:14px;
+    margin-top:15px;
+}
+
+.key-box strong{
+    color:#1d4ed8;
+}
+
+.table-wrapper{
+    overflow:auto;
+    max-height:550px;
+    border:1px solid var(--border);
+    border-radius:10px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:800px;
+}
+
+th,
+td{
+    padding:10px 12px;
+    border-bottom:1px solid var(--border);
+    text-align:left;
+    font-size:13px;
+}
+
+th{
+    background:#f8fafc;
+    position:sticky;
+    top:0;
+    z-index:2;
+}
+
+tr:hover td{
+    background:#f8fafc;
+}
+
+.badge{
+    display:inline-block;
+    padding:4px 8px;
+    border-radius:20px;
+    font-size:11px;
+    font-weight:bold;
+}
+
+.badge-new{
+    background:#dcfce7;
+    color:#166534;
+}
+
+.badge-removed{
+    background:#fee2e2;
+    color:#991b1b;
+}
+
+.badge-stable{
+    background:#e0f2fe;
+    color:#075985;
+}
+
+.badge-changed{
+    background:#fef3c7;
+    color:#92400e;
+}
+
+.badge-divergent{
+    background:#ede9fe;
+    color:#6d28d9;
+}
+
+.filters{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:15px;
+}
+
+.filters input,
+.filters select{
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:10px;
+    background:white;
+}
+
+.quality{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:15px;
+}
+
+.quality-item{
+    padding:15px;
+    border-radius:10px;
+    background:#f8fafc;
+    border:1px solid var(--border);
+}
+
+.quality-number{
+    font-size:25px;
+    font-weight:bold;
+    margin-top:5px;
+}
+
+.report{
+    line-height:1.6;
+}
+
+.report ul{
+    padding-left:20px;
+}
+
+.empty{
+    padding:35px;
+    text-align:center;
+    color:var(--muted);
+}
+
+.hidden{
+    display:none!important;
+}
+
+.notice{
+    background:#fff7ed;
+    border:1px solid #fed7aa;
+    color:#9a3412;
+    border-radius:10px;
+    padding:13px;
+    margin-top:15px;
+}
+
+.success-notice{
+    background:#f0fdf4;
+    border:1px solid #bbf7d0;
+    color:#166534;
+}
+
+footer{
+    text-align:center;
+    color:var(--muted);
+    padding:30px;
+    font-size:13px;
+}
+
+@media(max-width:1000px){
+
+    .stats{
+        grid-template-columns:repeat(2,1fr);
+    }
+
+    .dashboard-grid{
+        grid-template-columns:1fr;
+    }
+
+    .quality{
+        grid-template-columns:1fr;
+    }
+
+}
+
+@media(max-width:600px){
+
+    .container{
+        padding:12px;
+    }
+
+    .stats{
+        grid-template-columns:1fr;
+    }
+
+    header{
+        padding:20px;
+    }
+
+    header h1{
+        font-size:24px;
+    }
+
+}
+
+</style>
+</head>
+
+<body>
+
+<header>
+<div class="header-content">
+
+<h1>📊 Analisador de Planilhas</h1>
+
+<p>
+Compare até 100 arquivos XLSX, XLS ou CSV,
+identifique alterações, divergências, registros novos e removidos.
+</p>
+
+</div>
+</header>
+
+<div class="container">
+
+<!-- UPLOAD -->
+
+<div class="card">
+
+<h2>📁 1. Arquivos</h2>
+
+<div
+    id="uploadZone"
+    class="upload-zone"
+>
+
+<div class="upload-icon">📂</div>
+
+<strong>
+Arraste suas planilhas aqui
+</strong>
+
+<span>
+ou clique para selecionar até 100 arquivos
+</span>
+
+</div>
+
+<input
+    id="fileInput"
+    type="file"
+    multiple
+    accept=".xlsx,.xls,.csv"
+/>
+
+<div class="actions">
+
+<button
+    id="chooseBtn"
+    class="btn-primary"
+>
+Selecionar arquivos
+</button>
+
+<button
+    id="clearBtn"
+    class="btn-danger"
+    disabled
+>
+Limpar
+</button>
+
+<button
+    id="analyzeBtn"
+    class="btn-success"
+    disabled
+>
+🔎 Analisar planilhas
+</button>
+
+</div>
+
+<div
+    id="progressContainer"
+    class="progress-container"
+>
+
+<div class="progress-bar">
+
+<div
+    id="progressFill"
+    class="progress-fill"
+></div>
+
+</div>
+
+<div
+    id="progressText"
+    class="progress-text"
+>
+Aguardando...
+</div>
+
+</div>
+
+<div
+    id="fileList"
+    class="file-list"
+>
+</div>
+
+</div>
+
+
+<!-- RESULTADO -->
+
+<div id="results" class="hidden">
+
+<!-- DASHBOARD -->
+
+<div class="card">
+
+<h2>📊 2. Dashboard</h2>
+
+<div class="stats">
+
+<div class="stat blue">
+<div class="stat-label">Arquivos</div>
+<div id="statFiles" class="stat-value">0</div>
+</div>
+
+<div class="stat">
+<div class="stat-label">Registros lidos</div>
+<div id="statRows" class="stat-value">0</div>
+</div>
+
+<div class="stat purple">
+<div class="stat-label">Registros únicos</div>
+<div id="statUnique" class="stat-value">0</div>
+</div>
+
+<div class="stat orange">
+<div class="stat-label">Duplicados</div>
+<div id="statDuplicates" class="stat-value">0</div>
+</div>
+
+<div class="stat green">
+<div class="stat-label">Novos</div>
+<div id="statNew" class="stat-value">0</div>
+</div>
+
+<div class="stat red">
+<div class="stat-label">Removidos</div>
+<div id="statRemoved" class="stat-value">0</div>
+</div>
+
+<div class="stat orange">
+<div class="stat-label">Alterados</div>
+<div id="statChanged" class="stat-value">0</div>
+</div>
+
+<div class="stat purple">
+<div class="stat-label">Divergências</div>
+<div id="statDivergent" class="stat-value">0</div>
+</div>
+
+</div>
+
+<div id="keyInfo" class="key-box"></div>
+
+</div>
+
+
+<!-- GRAFICOS -->
+
+<div class="dashboard-grid">
+
+<div class="card">
+
+<h2>📈 Registros por arquivo</h2>
+
+<div class="chart-container">
+<canvas id="filesChart"></canvas>
+</div>
+
+</div>
+
+<div class="card">
+
+<h2>📊 Situação dos registros</h2>
+
+<div class="chart-container">
+<canvas id="statusChart"></canvas>
+</div>
+
+</div>
+
+</div>
+
+
+<!-- CONSOLIDADO -->
+
+<div class="card">
+
+<h2>📋 3. Registros consolidados</h2>
+
+<div class="filters">
+
+<input
+    id="searchInput"
+    type="text"
+    placeholder="Pesquisar..."
+/>
+
+<select id="statusFilter">
+
+<option value="">Todos os status</option>
+<option value="Novo">Novo</option>
+<option value="Removido">Removido</option>
+<option value="Estável">Estável</option>
+<option value="Alterado">Alterado</option>
+<option value="Divergente">Divergente</option>
+
+</select>
+
+</div>
+
+<div class="table-wrapper">
+
+<table>
+
+<thead id="mainHead"></thead>
+
+<tbody id="mainBody"></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+
+<!-- DIVERGENCIAS -->
+
+<div class="card">
+
+<h2>⚠️ 4. Divergências encontradas</h2>
+
+<div class="table-wrapper">
+
+<table>
+
+<thead>
+
+<tr>
+<th>Chave</th>
+<th>Campo</th>
+<th>Valores encontrados</th>
+<th>Arquivos</th>
+</tr>
+
+</thead>
+
+<tbody id="divergenceBody"></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+
+<!-- QUALIDADE -->
+
+<div class="card">
+
+<h2>🧪 5. Qualidade dos dados</h2>
+
+<div class="quality">
+
+<div class="quality-item">
+
+<div>Score de qualidade</div>
+
+<div
+    id="qualityScore"
+    class="quality-number"
+>
+0%
+</div>
+
+</div>
+
+<div class="quality-item">
+
+<div>Células vazias</div>
+
+<div
+    id="emptyCells"
+    class="quality-number"
+>
+0
+</div>
+
+</div>
+
+<div class="quality-item">
+
+<div>Registros sem chave</div>
+
+<div
+    id="noKeyRows"
+    class="quality-number"
+>
+0
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
+<!-- RELATORIO -->
+
+<div class="card">
+
+<h2>📝 6. Relatório executivo</h2>
+
+<div
+    id="report"
+    class="report"
+></div>
+
+</div>
+
+
+<!-- EXPORTAÇÃO -->
+
+<div class="card">
+
+<h2>📤 7. Exportação</h2>
+
+<div class="actions">
+
+<button
+    id="exportCsv"
+    class="btn-primary"
+>
+CSV
+</button>
+
+<button
+    id="exportXlsx"
+    class="btn-success"
+>
+Excel XLSX
+</button>
+
+<button
+    id="exportPdf"
+    class="btn-warning"
+>
+PDF
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<footer>
+
+Analisador de Planilhas — V1  
+<br>
+Processamento realizado localmente no navegador.
+
+</footer>
+
+
+<script>
+
+/* =========================================================
+   ESTADO DA APLICAÇÃO
+========================================================= */
+
+const state = {
+
+    files: [],
+
+    parsed: [],
+
+    result: null,
+
+    charts: []
+
+};
+
+
+/* =========================================================
+   ELEMENTOS
+========================================================= */
+
+const fileInput =
+    document.getElementById("fileInput");
+
+const uploadZone =
+    document.getElementById("uploadZone");
+
+const chooseBtn =
+    document.getElementById("chooseBtn");
+
+const clearBtn =
+    document.getElementById("clearBtn");
+
+const analyzeBtn =
+    document.getElementById("analyzeBtn");
+
+const fileList =
+    document.getElementById("fileList");
+
+const progressContainer =
+    document.getElementById("progressContainer");
+
+const progressFill =
+    document.getElementById("progressFill");
+
+const progressText =
+    document.getElementById("progressText");
+
+const results =
+    document.getElementById("results");
+
+
+/* =========================================================
+   UTILITÁRIOS
+========================================================= */
+
+function normalize(value){
+
+    if(value === null || value === undefined){
+        return "";
+    }
+
+    return String(value)
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g,"")
+        .replace(/\s+/g," ");
+
+}
+
+
+function displayValue(value){
+
+    if(value === null || value === undefined){
+        return "";
+    }
+
+    return String(value).trim();
+
+}
+
+
+function escapeHtml(value){
+
+    return String(value ?? "")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#039;");
+
+}
+
+
+function formatNumber(value){
+
+    return Number(value || 0)
+        .toLocaleString("pt-BR");
+
+}
+
+
+function sleep(ms){
+
+    return new Promise(resolve =>
+        setTimeout(resolve,ms)
+    );
+
+}
+
+
+function setProgress(percent,text){
+
+    progressContainer.style.display = "block";
+
+    progressFill.style.width =
+        percent + "%";
+
+    progressText.textContent =
+        text || "";
+
+}
+
+
+/* =========================================================
+   UPLOAD
+========================================================= */
+
+chooseBtn.addEventListener(
+    "click",
+    () => fileInput.click()
+);
+
+
+uploadZone.addEventListener(
+    "click",
+    () => fileInput.click()
+);
+
+
+fileInput.addEventListener(
+    "change",
+    event => {
+
+        addFiles(
+            Array.from(event.target.files)
+        );
+
+        fileInput.value = "";
+
+    }
+);
+
+
+uploadZone.addEventListener(
+    "dragover",
+    event => {
+
+        event.preventDefault();
+
+        uploadZone.classList.add("dragover");
+
+    }
+);
+
+
+uploadZone.addEventListener(
+    "dragleave",
+    () => {
+
+        uploadZone.classList.remove("dragover");
+
+    }
+);
+
+
+uploadZone.addEventListener(
+    "drop",
+    event => {
+
+        event.preventDefault();
+
+        uploadZone.classList.remove("dragover");
+
+        addFiles(
+            Array.from(event.dataTransfer.files)
+        );
+
+    }
+);
+
+
+function addFiles(newFiles){
+
+    const valid = newFiles.filter(file => {
+
+        const name =
+            file.name.toLowerCase();
+
+        return (
+            name.endsWith(".xlsx") ||
+            name.endsWith(".xls") ||
+            name.endsWith(".csv")
+        );
+
+    });
+
+    for(const file of valid){
+
+        if(state.files.length >= 100){
+            break;
+        }
+
+        const exists =
+            state.files.some(
+                item =>
+                    item.name === file.name &&
+                    item.size === file.size
+            );
+
+        if(!exists){
+
+            state.files.push(file);
+
+        }
+
+    }
+
+    renderFileList();
+
+}
+
+
+function renderFileList(){
+
+    if(state.files.length === 0){
+
+        fileList.innerHTML = `
+            <div class="empty">
+                Nenhum arquivo selecionado.
+            </div>
+        `;
+
+    }else{
+
+        fileList.innerHTML =
+            state.files.map(
+                (file,index) => `
+
+                <div class="file-item">
+
+                    <div>
+
+                        <div class="file-name">
+                            ${escapeHtml(file.name)}
+                        </div>
+
+                        <div class="file-meta">
+                            ${formatBytes(file.size)}
+                        </div>
+
+                    </div>
+
+                    <button
+                        class="remove-file"
+                        onclick="removeFile(${index})"
+                    >
+                        Remover
+                    </button>
+
+                </div>
+            `
+            ).join("");
+
+    }
+
+    clearBtn.disabled =
+        state.files.length === 0;
+
+    analyzeBtn.disabled =
+        state.files.length === 0;
+
+}
+
+
+function removeFile(index){
+
+    state.files.splice(index,1);
+
+    renderFileList();
+
+}
+
+
+window.removeFile =
+    removeFile;
+
+
+function formatBytes(bytes){
+
+    if(bytes === 0){
+        return "0 Bytes";
+    }
+
+    const units = [
+        "Bytes",
+        "KB",
+        "MB",
+        "GB"
+    ];
+
+    const i =
+        Math.floor(
+            Math.log(bytes) /
+            Math.log(1024)
+        );
+
+    return (
+        bytes /
+        Math.pow(1024,i)
+    ).toFixed(2)
+    + " "
+    + units[i];
+
+}
+
+
+/* =========================================================
+   LIMPAR
+========================================================= */
+
+clearBtn.addEventListener(
+    "click",
+    () => {
+
+        state.files = [];
+        state.parsed = [];
+        state.result = null;
+
+        destroyCharts();
+
+        results.classList.add("hidden");
+
+        progressContainer.style.display =
+            "none";
+
+        renderFileList();
+
+    }
+);
+
+
+/* =========================================================
+   LEITURA DE CSV
+========================================================= */
+
+function parseCSV(text){
+
+    const rows = [];
+
+    let row = [];
+    let cell = "";
+
+    let quoted = false;
+
+    for(let i=0;i<text.length;i++){
+
+        const char =
+            text[i];
+
+        const next =
+            text[i+1];
+
+        if(char === '"' && quoted && next === '"'){
+
+            cell += '"';
+
+            i++;
+
+        }
+
+        else if(char === '"'){
+
+            quoted = !quoted;
+
+        }
+
+        else if(
+            (char === "," || char === ";")
+            &&
+            !quoted
+        ){
+
+            row.push(cell);
+
+            cell = "";
+
+        }
+
+        else if(
+            (char === "\n" || char === "\r")
+            &&
+            !quoted
+        ){
+
+            if(char === "\r" && next === "\n"){
+                i++;
+            }
+
+            row.push(cell);
+
+            if(
+                row.some(
+                    value =>
+                        String(value).trim() !== ""
+                )
+            ){
+
+                rows.push(row);
+
+            }
+
+            row = [];
+            cell = "";
+
+        }
+
+        else{
+
+            cell += char;
+
+        }
+
+    }
+
+    if(cell !== "" || row.length){
+
+        row.push(cell);
+
+        if(
+            row.some(
+                value =>
+                    String(value).trim() !== ""
+            )
+        ){
+
+            rows.push(row);
+
+        }
+
+    }
+
+    if(rows.length === 0){
+        return [];
+    }
+
+    const headers =
+        rows[0].map(
+            (header,index) =>
+                String(header).trim()
+                || `Coluna_${index+1}`
+        );
+
+    return rows
+        .slice(1)
+        .map(values => {
+
+            const obj = {};
+
+            headers.forEach(
+                (header,index) => {
+
+                    obj[header] =
+                        values[index] ?? "";
+
+                }
+            );
+
+            return obj;
+
+        });
+
+}
+
+
+/* =========================================================
+   LIMPEZA
+========================================================= */
+
+function cleanRows(rows){
+
+    return rows
+        .map(row => {
+
+            const obj = {};
+
+            Object.keys(row).forEach(
+                key => {
+
+                    const cleanKey =
+                        String(key)
+                            .trim()
+                            .replace(/\s+/g," ");
+
+                    obj[cleanKey] =
+                        typeof row[key] === "string"
+                            ? row[key].trim()
+                            : row[key];
+
+                }
+            );
+
+            return obj;
+
+        })
+        .filter(row =>
+            Object.values(row).some(
+                value =>
+                    normalize(value) !== ""
+            )
+        );
+
+}
+
+
+/* =========================================================
+   LEITURA DE ARQUIVOS
+========================================================= */
+
+async function readFile(file){
+
+    const name =
+        file.name.toLowerCase();
+
+    if(name.endsWith(".csv")){
+
+        const text =
+            await file.text();
+
+        return [{
+            sheet:"CSV",
+            rows:
+                cleanRows(
+                    parseCSV(text)
+                )
+        }];
+
+    }
+
+    const buffer =
+        await file.arrayBuffer();
+
+    const workbook =
+        XLSX.read(
+            buffer,
+            {
+                type:"array",
+                cellDates:true
+            }
+        );
+
+    const sheets = [];
+
+    workbook.SheetNames.forEach(
+        sheetName => {
+
+            const worksheet =
+                workbook.Sheets[sheetName];
+
+            const rows =
+                XLSX.utils.sheet_to_json(
+                    worksheet,
+                    {
+                        defval:"",
+                        raw:false
+                    }
+                );
+
+            sheets.push({
+
+                sheet:sheetName,
+
+                rows:
+                    cleanRows(rows)
+
+            });
+
+        }
+    );
+
+    return sheets;
+
+}
+
+
+/* =========================================================
+   DETECÇÃO DE COLUNA-CHAVE
+========================================================= */
+
+const KEY_CANDIDATES = [
+
+    "id",
+    "codigo",
+    "cod",
+    "cpf",
+    "cnpj",
+    "cliente",
+    "numero cliente",
+    "numero do cliente",
+    "contrato",
+    "numero contrato",
+    "os",
+    "ordem servico",
+    "numero os",
+    "mac",
+    "email",
+    "matricula",
+    "serial",
+    "serial number"
+
+];
+
+
+function detectKey(rows){
+
+    if(!rows.length){
+        return null;
+    }
+
+    const columns =
+        Object.keys(rows[0]);
+
+    for(const candidate of KEY_CANDIDATES){
+
+        const exact =
+            columns.find(
+                column =>
+                    normalize(column) === candidate
+            );
+
+        if(exact){
+            return exact;
+        }
+
+    }
+
+    for(const candidate of KEY_CANDIDATES){
+
+        const fuzzy =
+            columns.find(
+                column =>
+                    normalize(column)
+                        .includes(candidate)
+            );
+
+        if(fuzzy){
+            return fuzzy;
+        }
+
+    }
+
+    return null;
+
+}
+
+
+/* =========================================================
+   CHAVE DA LINHA
+========================================================= */
+
+function rowKey(row,key){
+
+    if(key){
+
+        const value =
+            normalize(row[key]);
+
+        if(value){
+            return value;
+        }
+
+    }
+
+    const values =
+        Object.keys(row)
+            .sort()
+            .map(
+                column =>
+                    normalize(row[column])
+            );
+
+    return "__ROW__" +
+        JSON.stringify(values);
+
+}
+
+
+/* =========================================================
+   COMPARAÇÃO
+========================================================= */
+
+function compareData(){
+
+    const allRows = [];
+
+    let totalRows = 0;
+
+    let emptyCells = 0;
+
+    let totalCells = 0;
+
+    let noKeyRows = 0;
+
+    const fileSummary = [];
+
+    state.parsed.forEach(
+        parsed => {
+
+            let fileRows = 0;
+
+            parsed.sheets.forEach(
+                sheet => {
+
+                    sheet.rows.forEach(
+                        (row,rowIndex) => {
+
+                            totalRows++;
+
+                            fileRows++;
+
+                            const key =
+                                rowKey(
+                                    row,
+                                    parsed.key
+                                );
+
+                            if(
+                                key.startsWith("__ROW__")
+                            ){
+                                noKeyRows++;
+                            }
+
+                            Object.values(row)
+                                .forEach(value => {
+
+                                    totalCells++;
+
+                                    if(
+                                        normalize(value) === ""
+                                    ){
+                                        emptyCells++;
+                                    }
+
+                                });
+
+                            allRows.push({
+
+                                file:
+                                    parsed.fileName,
+
+                                fileIndex:
+                                    parsed.fileIndex,
+
+                                sheet:
+                                    sheet.sheet,
+
+                                rowIndex:
+                                    rowIndex + 2,
+
+                                key,
+
+                                row
+
+                            });
+
+                        }
+                    );
+
+                }
+            );
+
+            fileSummary.push({
+
+                file:
+                    parsed.fileName,
+
+                rows:
+                    fileRows
+
+            });
+
+        }
+    );
+
+
+    /* agrupamento */
+
+    const groups =
+        new Map();
+
+    allRows.forEach(item => {
+
+        if(!groups.has(item.key)){
+            groups.set(item.key,[]);
+        }
+
+        groups.get(item.key).push(item);
+
+    });
+
+
+    const uniqueRows =
+        groups.size;
+
+
+    let duplicates = 0;
+
+    groups.forEach(
+        items => {
+
+            if(items.length > 1){
+
+                duplicates +=
+                    items.length - 1;
+
+            }
+
+        }
+    );
+
+
+    /*
+        Arquivo anterior e arquivo atual.
+
+        A ordem considerada é a ordem
+        de upload.
+    */
+
+    const previousIndex =
+        Math.max(
+            0,
+            state.parsed.length - 2
+        );
+
+    const currentIndex =
+        Math.max(
+            0,
+            state.parsed.length - 1
+        );
+
+
+    const previous =
+        state.parsed.length >= 2
+            ? state.parsed[previousIndex]
+            : null;
+
+    const current =
+        state.parsed.length >= 1
+            ? state.parsed[currentIndex]
+            : null;
+
+
+    const previousKeys =
+        new Set();
+
+    const currentKeys =
+        new Set();
+
+
+    if(previous){
+
+        previous.sheets.forEach(
+            sheet => {
+
+                sheet.rows.forEach(
+                    row => {
+
+                        previousKeys.add(
+                            rowKey(
+                                row,
+                                previous.key
+                            )
+                        );
+
+                    }
+                );
+
+            }
+        );
+
+    }
+
+
+    if(current){
+
+        current.sheets.forEach(
+            sheet => {
+
+                sheet.rows.forEach(
+                    row => {
+
+                        currentKeys.add(
+                            rowKey(
+                                row,
+                                current.key
+                            )
+                        );
+
+                    }
+                );
+
+            }
+        );
+
+    }
+
+
+    let newCount = 0;
+    let removedCount = 0;
+    let changedCount = 0;
+
+
+    currentKeys.forEach(key => {
+
+        if(
+            previous &&
+            !previousKeys.has(key)
+        ){
+
+            newCount++;
+
+        }
+
+    });
+
+
+    previousKeys.forEach(key => {
+
+        if(
+            current &&
+            !currentKeys.has(key)
+        ){
+
+            removedCount++;
+
+        }
+
+    });
+
+
+    /* divergências */
+
+    const divergences = [];
+
+
+    groups.forEach(
+        (items,key) => {
+
+            if(items.length < 2){
+                return;
+            }
+
+            const columns =
+                new Set();
+
+            items.forEach(
+                item => {
+
+                    Object.keys(item.row)
+                        .forEach(
+                            column =>
+                                columns.add(column)
+                        );
+
+                }
+            );
+
+
+            columns.forEach(
+                column => {
+
+                    const values = [];
+
+                    items.forEach(
+                        item => {
+
+                            const value =
+                                displayValue(
+                                    item.row[column]
+                                );
+
+                            if(value !== ""){
+                                values.push({
+                                    value,
+                                    file:item.file
+                                });
+                            }
+
+                        }
+                    );
+
+
+                    const uniqueValues =
+                        [
+                            ...new Set(
+                                values.map(
+                                    x => normalize(x.value)
+                                )
+                            )
+                        ];
+
+
+                    if(uniqueValues.length > 1){
+
+                        divergences.push({
+
+                            key,
+
+                            field:column,
+
+                            values:
+                                [
+                                    ...new Map(
+                                        values.map(
+                                            x => [
+                                                x.file,
+                                                x.value
+                                            ]
+                                        )
+                                    ).entries()
+                                ],
+
+                        });
+
+                    }
+
+                }
+            );
+
+        }
+    );
+
+
+    /*
+        Alterações entre penúltimo
+        e último arquivo.
+    */
+
+    if(previous && current){
+
+        const previousMap =
+            new Map();
+
+        previous.sheets.forEach(
+            sheet => {
+
+                sheet.rows.forEach(
+                    row => {
+
+                        previousMap.set(
+                            rowKey(
+                                row,
+                                previous.key
+                            ),
+                            row
+                        );
+
+                    }
+                );
+
+            }
+        );
+
+
+        const currentMap =
+            new Map();
+
+        current.sheets.forEach(
+            sheet => {
+
+                sheet.rows.forEach(
+                    row => {
+
+                        currentMap.set(
+                            rowKey(
+                                row,
+                                current.key
+                            ),
+                            row
+                        );
+
+                    }
+                );
+
+            }
+        );
+
+
+        currentMap.forEach(
+            (currentRow,key) => {
+
+                if(
+                    !previousMap.has(key)
+                ){
+                    return;
+                }
+
+                const previousRow =
+                    previousMap.get(key);
+
+                const columns =
+                    new Set([
+                        ...Object.keys(previousRow),
+                        ...Object.keys(currentRow)
+                    ]);
+
+                let changed = false;
+
+                columns.forEach(
+                    column => {
+
+                        if(
+                            normalize(
+                                previousRow[column]
+                            )
+                            !==
+                            normalize(
+                                currentRow[column]
+                            )
+                        ){
+
+                            changed = true;
+
+                        }
+
+                    }
+                );
+
+                if(changed){
+
+                    changedCount++;
+
+                }
+
+            }
+        );
+
+    }
+
+
+    /*
+        Status por registro.
+    */
+
+    const consolidated = [];
+
+
+    groups.forEach(
+        (items,key) => {
+
+            const files =
+                [
+                    ...new Set(
+                        items.map(
+                            item => item.file
+                        )
+                    )
+                ];
+
+            const divergence =
+                divergences.some(
+                    item =>
+                        item.key === key
+                );
+
+            let status = "Estável";
+
+
+            if(divergence){
+
+                status = "Divergente";
+
+            }
+
+            else if(
+                previous &&
+                current
+            ){
+
+                if(
+                    !previousKeys.has(key) &&
+                    currentKeys.has(key)
+                ){
+
+                    status = "Novo";
+
+                }
+
+                else if(
+                    previousKeys.has(key) &&
+                    !currentKeys.has(key)
+                ){
+
+                    status = "Removido";
+
+                }
+
+                else {
+
+                    const previousItem =
+                        items.find(
+                            item =>
+                                item.fileIndex === previousIndex
+                        );
+
+                    const currentItem =
+                        items.find(
+                            item =>
+                                item.fileIndex === currentIndex
+                        );
+
+                    if(
+                        previousItem &&
+                        currentItem
+                    ){
+
+                        const columns =
+                            new Set([
+                                ...Object.keys(
+                                    previousItem.row
+                                ),
+                                ...Object.keys(
+                                    currentItem.row
+                                )
+                            ]);
+
+                        let changed = false;
+
+                        columns.forEach(
+                            column => {
+
+                                if(
+                                    normalize(
+                                        previousItem.row[column]
+                                    )
+                                    !==
+                                    normalize(
+                                        currentItem.row[column]
+                                    )
+                                ){
+
+                                    changed = true;
+
+                                }
+
+                            }
+                        );
+
+                        status =
+                            changed
+                                ? "Alterado"
+                                : "Estável";
+
+                    }
+
+                }
+
+            }
+
+            consolidated.push({
+
+                key,
+
+                status,
+
+                files,
+
+                sample:
+                    items[items.length - 1].row
+
+            });
+
+        }
+    );
+
+
+    /*
+        Score de qualidade.
+    */
+
+    let quality = 100;
+
+    if(totalCells > 0){
+
+        quality -=
+            (
+                emptyCells /
+                totalCells
+            ) * 40;
+
+    }
+
+    if(totalRows > 0){
+
+        quality -=
+            (
+                noKeyRows /
+                totalRows
+            ) * 40;
+
+    }
+
+    quality -=
+        Math.min(
+            20,
+            (
+                duplicates /
+                Math.max(1,totalRows)
+            ) * 20
+        );
+
+    quality =
+        Math.max(
+            0,
+            Math.min(
+                100,
+                quality
+            )
+        );
+
+
+    return {
+
+        totalRows,
+
+        uniqueRows,
+
+        duplicates,
+
+        newCount,
+
+        removedCount,
+
+        changedCount,
+
+        divergentCount:
+            divergences.length,
+
+        emptyCells,
+
+        noKeyRows,
+
+        quality,
+
+        fileSummary,
+
+        consolidated,
+
+        divergences
+
+    };
+
+}
+
+
+/* =========================================================
+   ANALISAR
+========================================================= */
+
+analyzeBtn.addEventListener(
+    "click",
+    analyze
+);
+
+
+async function analyze(){
+
+    if(state.files.length === 0){
+        return;
+    }
+
+    state.parsed = [];
+
+    setProgress(
+        0,
+        "Iniciando análise..."
+    );
+
+    for(
+        let i=0;
+        i<state.files.length;
+        i++
+    ){
+
+        const file =
+            state.files[i];
+
+        setProgress(
+            Math.round(
+                (i /
+                state.files.length)
+                * 90
+            ),
+            `Lendo ${i+1}/${state.files.length}: ${file.name}`
+        );
+
+        try{
+
+            const sheets =
+                await readFile(file);
+
+            const firstRows =
+                sheets.flatMap(
+                    sheet => sheet.rows
+                );
+
+            const key =
+                detectKey(firstRows);
+
+            state.parsed.push({
+
+                fileName:
+                    file.name,
+
+                fileIndex:i,
+
+                sheets,
+
+                key
+
+            });
+
+        }catch(error){
+
+            console.error(error);
+
+            state.parsed.push({
+
+                fileName:
+                    file.name,
+
+                fileIndex:i,
+
+                sheets:[],
+
+                key:null,
+
+                error:
+                    error.message
+
+            });
+
+        }
+
+        await sleep(10);
+
+    }
+
+
+    setProgress(
+        95,
+        "Comparando registros..."
+    );
+
+
+    state.result =
+        compareData();
+
+
+    renderDashboard();
+
+    renderMainTable();
+
+    renderDivergences();
+
+    renderQuality();
+
+    renderReport();
+
+    results.classList.remove(
+        "hidden"
+    );
+
+
+    setProgress(
+        100,
+        "Análise concluída."
+    );
+
+}
+
+
+/* =========================================================
+   DASHBOARD
+========================================================= */
+
+function renderDashboard(){
+
+    const result =
+        state.result;
+
+
+    document.getElementById(
+        "statFiles"
+    ).textContent =
+        formatNumber(
+            state.files.length
+        );
+
+
+    document.getElementById(
+        "statRows"
+    ).textContent =
+        formatNumber(
+            result.totalRows
+        );
+
+
+    document.getElementById(
+        "statUnique"
+    ).textContent =
+        formatNumber(
+            result.uniqueRows
+        );
+
+
+    document.getElementById(
+        "statDuplicates"
+    ).textContent =
+        formatNumber(
+            result.duplicates
+        );
+
+
+    document.getElementById(
+        "statNew"
+    ).textContent =
+        formatNumber(
+            result.newCount
+        );
+
+
+    document.getElementById(
+        "statRemoved"
+    ).textContent =
+        formatNumber(
+            result.removedCount
+        );
+
+
+    document.getElementById(
+        "statChanged"
+    ).textContent =
+        formatNumber(
+            result.changedCount
+        );
+
+
+    document.getElementById(
+        "statDivergent"
+    ).textContent =
+        formatNumber(
+            result.divergentCount
+        );
+
+
+    const keys =
+        state.parsed
+            .map(
+                item =>
+                    item.key
+            )
+            .filter(Boolean);
+
+
+    const uniqueKeys =
+        [
+            ...new Set(keys)
+        ];
+
+
+    document.getElementById(
+        "keyInfo"
+    ).innerHTML = `
+
+        <strong>🔑 Chave identificada:</strong>
+
+        ${
+            uniqueKeys.length
+                ? uniqueKeys.map(
+                    key =>
+                        `<code>${escapeHtml(key)}</code>`
+                  ).join(", ")
+                : "Nenhuma chave confiável encontrada."
+        }
+
+        <br><br>
+
+        <strong>ℹ️ Ordem de comparação:</strong>
+
+        ${
+            state.files.length >= 2
+                ? "O primeiro arquivo é tratado como anterior e o último como atual. Os arquivos intermediários também participam da análise de divergências."
+                : "É necessário pelo menos 2 arquivos para identificar novos, removidos e alterados."
+        }
+
+    `;
+
+
+    renderCharts();
+
+}
+
+
+/* =========================================================
+   GRÁFICOS
+========================================================= */
+
+function destroyCharts(){
+
+    state.charts.forEach(
+        chart => {
+
+            try{
+                chart.destroy();
+            }catch(e){}
+
+        }
+    );
+
+    state.charts = [];
+
+}
+
+
+function renderCharts(){
+
+    destroyCharts();
+
+    const result =
+        state.result;
+
+
+    const filesCanvas =
+        document.getElementById(
+            "filesChart"
+        );
+
+
+    const filesChart =
+        new Chart(
+            filesCanvas,
+            {
+
+                type:"bar",
+
+                data:{
+
+                    labels:
+                        result.fileSummary
+                            .map(
+                                item =>
+                                    item.file
+                            ),
+
+                    datasets:[{
+
+                        label:
+                            "Registros",
+
+                        data:
+                            result.fileSummary
+                                .map(
+                                    item =>
+                                        item.rows
+                                )
+
+                    }]
+
+                },
+
+                options:{
+
+                    responsive:true,
+
+                    maintainAspectRatio:false,
+
+                    plugins:{
+                        legend:{
+                            display:false
+                        }
+                    },
+
+                    scales:{
+                        y:{
+                            beginAtZero:true
+                        }
+                    }
+
+                }
+
+            }
+        );
+
+
+    const statusCanvas =
+        document.getElementById(
+            "statusChart"
+        );
+
+
+    const statusCount = {
+
+        Novo:
+            result.newCount,
+
+        Removido:
+            result.removedCount,
+
+        Alterado:
+            result.changedCount,
+
+        Divergente:
+            result.divergentCount,
+
+        Estável:
+            Math.max(
+                0,
+                result.uniqueRows
+                -
+                result.newCount
+                -
+                result.removedCount
+                -
+                result.changedCount
+                -
+                result.divergentCount
+            )
+
+    };
+
+
+    const statusChart =
+        new Chart(
+            statusCanvas,
+            {
+
+                type:"doughnut",
+
+                data:{
+
+                    labels:
+                        Object.keys(
+                            statusCount
+                        ),
+
+                    datasets:[{
+
+                        data:
+                            Object.values(
+                                statusCount
+                            )
+
+                    }]
+
+                },
+
+                options:{
+
+                    responsive:true,
+
+                    maintainAspectRatio:false
+
+                }
+
+            }
+        );
+
+
+    state.charts.push(
+        filesChart,
+        statusChart
+    );
+
+}
+
+
+/* =========================================================
+   TABELA PRINCIPAL
+========================================================= */
+
+function renderMainTable(){
+
+    const result =
+        state.result;
+
+
+    const rows =
+        result.consolidated;
+
+
+    const allColumns =
+        new Set();
+
+
+    rows.forEach(
+        item => {
+
+            Object.keys(
+                item.sample || {}
+            ).forEach(
+                column =>
+                    allColumns.add(column)
+            );
+
+        }
+    );
+
+
+    const columns =
+        [...allColumns];
+
+
+    const head =
+        document.getElementById(
+            "mainHead"
+        );
+
+
+    head.innerHTML = `
+
+        <tr>
+
+            <th>Chave</th>
+
+            <th>Status</th>
+
+            ${columns.map(
+                column =>
+                    `<th>${escapeHtml(column)}</th>`
+            ).join("")}
+
+            <th>Arquivos</th>
+
+        </tr>
+
+    `;
+
+
+    renderFilteredTable(
+        rows,
+        columns
+    );
+
+
+    document.getElementById(
+        "searchInput"
+    ).oninput =
+        () =>
+            renderFilteredTable(
+                rows,
+                columns
+            );
+
+
+    document.getElementById(
+        "statusFilter"
+    ).onchange =
+        () =>
+            renderFilteredTable(
+                rows,
+                columns
+            );
+
+}
+
+
+function renderFilteredTable(
+    rows,
+    columns
+){
+
+    const search =
+        normalize(
+            document.getElementById(
+                "searchInput"
+            ).value
+        );
+
+
+    const status =
+        document.getElementById(
+            "statusFilter"
+        ).value;
+
+
+    const filtered =
+        rows.filter(
+            item => {
+
+                if(
+                    status &&
+                    item.status !== status
+                ){
+                    return false;
+                }
+
+                if(!search){
+                    return true;
+                }
+
+                const text =
+                    [
+                        item.key,
+                        item.status,
+                        ...Object.values(
+                            item.sample || {}
+                        ),
+                        ...item.files
+                    ]
+                    .join(" ");
+
+
+                return normalize(text)
+                    .includes(search);
+
+            }
+        );
+
+
+    const body =
+        document.getElementById(
+            "mainBody"
+        );
+
+
+    if(filtered.length === 0){
+
+        body.innerHTML = `
+
+            <tr>
+
+                <td
+                    colspan="${columns.length + 3}"
+                    class="empty"
+                >
+                    Nenhum registro encontrado.
+                </td>
+
+            </tr>
+
+        `;
+
+        return;
+
+    }
+
+
+    body.innerHTML =
+        filtered.map(
+            item => `
+
+            <tr>
+
+                <td>
+                    ${escapeHtml(item.key)}
+                </td>
+
+                <td>
+                    ${statusBadge(item.status)}
+                </td>
+
+                ${columns.map(
+                    column =>
+                        `<td>${escapeHtml(
+                            displayValue(
+                                item.sample?.[column]
+                            )
+                        )}</td>`
+                ).join("")}
+
+                <td>
+                    ${escapeHtml(
+                        item.files.join(", ")
+                    )}
+                </td>
+
+            </tr>
+
+        `
+        ).join("");
+
+}
+
+
+function statusBadge(status){
+
+    const classes = {
+
+        Novo:"badge-new",
+
+        Removido:"badge-removed",
+
+        Estável:"badge-stable",
+
+        Alterado:"badge-changed",
+
+        Divergente:"badge-divergent"
+
+    };
+
+
+    return `
+
+        <span
+            class="badge ${classes[status] || ""}"
+        >
+            ${escapeHtml(status)}
+        </span>
+
+    `;
+
+}
+
+
+/* =========================================================
+   DIVERGÊNCIAS
+========================================================= */
+
+function renderDivergences(){
+
+    const body =
+        document.getElementById(
+            "divergenceBody"
+        );
+
+
+    const divergences =
+        state.result.divergences;
+
+
+    if(divergences.length === 0){
+
+        body.innerHTML = `
+
+            <tr>
+
+                <td
+                    colspan="4"
+                    class="empty"
+                >
+                    Nenhuma divergência encontrada.
+                </td>
+
+            </tr>
+
+        `;
+
+        return;
+
+    }
+
+
+    body.innerHTML =
+        divergences.map(
+            item => `
+
+            <tr>
+
+                <td>
+                    ${escapeHtml(item.key)}
+                </td>
+
+                <td>
+                    ${escapeHtml(item.field)}
+                </td>
+
+                <td>
+
+                    ${item.values.map(
+                        pair => `
+
+                        <div>
+                            <strong>
+                                ${escapeHtml(pair[0])}
+                            </strong>:
+                            ${escapeHtml(pair[1])}
+                        </div>
+
+                    `).join("")}
+
+                </td>
+
+                <td>
+
+                    ${escapeHtml(
+                        item.values
+                            .map(
+                                pair =>
+                                    pair[0]
+                            )
+                            .join(", ")
+                    )}
+
+                </td>
+
+            </tr>
+
+        `
+        ).join("");
+
+}
+
+
+/* =========================================================
+   QUALIDADE
+========================================================= */
+
+function renderQuality(){
+
+    const result =
+        state.result;
+
+
+    document.getElementById(
+        "qualityScore"
+    ).textContent =
+        result.quality.toFixed(1)
+        + "%";
+
+
+    document.getElementById(
+        "emptyCells"
+    ).textContent =
+        formatNumber(
+            result.emptyCells
+        );
+
+
+    document.getElementById(
+        "noKeyRows"
+    ).textContent =
+        formatNumber(
+            result.noKeyRows
+        );
+
+}
+
+
+/* =========================================================
+   RELATÓRIO
+========================================================= */
+
+function renderReport(){
+
+    const r =
+        state.result;
+
+
+    const qualityText =
+        r.quality >= 90
+            ? "excelente"
+            : r.quality >= 75
+                ? "boa"
+                : r.quality >= 50
+                    ? "moderada"
+                    : "baixa";
+
+
+    const latest =
+        state.files.length
+            ? state.files[
+                state.files.length - 1
+              ].name
+            : "";
+
+
+    document.getElementById(
+        "report"
+    ).innerHTML = `
+
+        <p>
+            Foram analisados
+            <strong>
+                ${formatNumber(state.files.length)}
+            </strong>
+            arquivo(s), totalizando
+            <strong>
+                ${formatNumber(r.totalRows)}
+            </strong>
+            registros e
+            <strong>
+                ${formatNumber(r.uniqueRows)}
+            </strong>
+            registros únicos.
+        </p>
+
+        <ul>
+
+            <li>
+                <strong>
+                    ${formatNumber(r.newCount)}
+                </strong>
+                registro(s) identificado(s) como novo(s).
+            </li>
+
+            <li>
+                <strong>
+                    ${formatNumber(r.removedCount)}
+                </strong>
+                registro(s) identificado(s) como removido(s).
+            </li>
+
+            <li>
+                <strong>
+                    ${formatNumber(r.changedCount)}
+                </strong>
+                registro(s) apresentaram alteração entre os dois últimos arquivos.
+            </li>
+
+            <li>
+                <strong>
+                    ${formatNumber(r.divergentCount)}
+                </strong>
+                divergência(s) foram identificadas.
+            </li>
+
+            <li>
+                <strong>
+                    ${formatNumber(r.duplicates)}
+                </strong>
+                registro(s) duplicado(s) foram encontrados.
+            </li>
+
+        </ul>
+
+        <p>
+            A qualidade geral dos dados foi classificada como
+            <strong>${qualityText}</strong>,
+            com score de
+            <strong>${r.quality.toFixed(1)}%</strong>.
+        </p>
+
+        ${
+            r.noKeyRows > 0
+            ?
+            `
+            <div class="notice">
+
+                ⚠️ Foram encontrados
+                <strong>
+                    ${formatNumber(r.noKeyRows)}
+                </strong>
+                registros sem uma chave identificadora confiável.
+
+                Esses registros podem exigir validação manual.
+
+            </div>
+            `
+            :
+            `
+            <div class="notice success-notice">
+
+                ✓ Todos os registros possuem uma chave
+                identificável pela aplicação.
+
+            </div>
+            `
+        }
+
+        <p>
+
+            Arquivo mais recente considerado:
+            <strong>
+                ${escapeHtml(latest)}
+            </strong>.
+
+        </p>
+
+        <p>
+
+            <strong>Recomendação:</strong>
+            revisar principalmente os registros classificados
+            como <strong>Divergente</strong>,
+            <strong>Alterado</strong> e
+            <strong>Removido</strong> antes de utilizar os dados
+            para decisões operacionais.
+
+        </p>
+
+    `;
+
+}
+
+
+/* =========================================================
+   EXPORTAR CSV
+========================================================= */
+
+document.getElementById(
+    "exportCsv"
+).addEventListener(
+    "click",
+    exportCSV
+);
+
+
+function exportCSV(){
+
+    const rows =
+        state.result.consolidated;
+
+
+    const columns =
+        new Set();
+
+
+    rows.forEach(
+        item => {
+
+            Object.keys(
+                item.sample || {}
+            ).forEach(
+                column =>
+                    columns.add(column)
+            );
+
+        }
+    );
+
+
+    const headers = [
+        "Chave",
+        "Status",
+        ...columns,
+        "Arquivos"
+    ];
+
+
+    const lines = [
+        headers.map(csvEscape).join(";")
+    ];
+
+
+    rows.forEach(
+        item => {
+
+            const line = [
+
+                item.key,
+
+                item.status,
+
+                ...[...columns].map(
+                    column =>
+                        item.sample?.[column] ?? ""
+                ),
+
+                item.files.join(", ")
+
+            ];
+
+
+            lines.push(
+                line.map(csvEscape)
+                    .join(";")
+            );
+
+        }
+    );
+
+
+    downloadBlob(
+
+        new Blob(
+            [
+                "\uFEFF" +
+                lines.join("\n")
+            ],
+            {
+                type:"text/csv;charset=utf-8"
+            }
+        ),
+
+        "analise_planilhas.csv"
+
+    );
+
+}
+
+
+function csvEscape(value){
+
+    const text =
+        String(value ?? "");
+
+    return `"${text.replace(
+        /"/g,
+        '""'
+    )}"`;
+
+}
+
+
+/* =========================================================
+   EXPORTAR XLSX
+========================================================= */
+
+document.getElementById(
+    "exportXlsx"
+).addEventListener(
+    "click",
+    exportXLSX
+);
+
+
+function exportXLSX(){
+
+    const workbook =
+        XLSX.utils.book_new();
+
+
+    const result =
+        state.result;
+
+
+    const resumo = [
+
+        ["ANÁLISE DE PLANILHAS"],
+
+        [],
+
+        ["Indicador","Valor"],
+
+        ["Arquivos",
+            state.files.length],
+
+        ["Registros lidos",
+            result.totalRows],
+
+        ["Registros únicos",
+            result.uniqueRows],
+
+        ["Duplicados",
+            result.duplicates],
+
+        ["Novos",
+            result.newCount],
+
+        ["Removidos",
+            result.removedCount],
+
+        ["Alterados",
+            result.changedCount],
+
+        ["Divergências",
+            result.divergentCount],
+
+        ["Células vazias",
+            result.emptyCells],
+
+        ["Registros sem chave",
+            result.noKeyRows],
+
+        ["Qualidade (%)",
+            result.quality]
+
+    ];
+
+
+    const wsResumo =
+        XLSX.utils.aoa_to_sheet(
+            resumo
+        );
+
+
+    XLSX.utils.book_append_sheet(
+        workbook,
+        wsResumo,
+        "Resumo"
+    );
+
+
+    const consolidated =
+        result.consolidated;
+
+
+    const columns =
+        new Set();
+
+
+    consolidated.forEach(
+        item => {
+
+            Object.keys(
+                item.sample || {}
+            ).forEach(
+                column =>
+                    columns.add(column)
+            );
+
+        }
+    );
+
+
+    const rows = [
+
+        [
+            "Chave",
+            "Status",
+            ...columns,
+            "Arquivos"
+        ]
+
+    ];
+
+
+    consolidated.forEach(
+        item => {
+
+            rows.push([
+
+                item.key,
+
+                item.status,
+
+                ...[...columns].map(
+                    column =>
+                        item.sample?.[column] ?? ""
+                ),
+
+                item.files.join(", ")
+
+            ]);
+
+        }
+    );
+
+
+    const wsConsolidado =
+        XLSX.utils.aoa_to_sheet(
+            rows
+        );
+
+
+    XLSX.utils.book_append_sheet(
+        workbook,
+        wsConsolidado,
+        "Consolidado"
+    );
+
+
+    const divergenceRows = [
+
+        [
+            "Chave",
+            "Campo",
+            "Arquivo",
+            "Valor"
+        ]
+
+    ];
+
+
+    result.divergences.forEach(
+        item => {
+
+            item.values.forEach(
+                pair => {
+
+                    divergenceRows.push([
+
+                        item.key,
+
+                        item.field,
+
+                        pair[0],
+
+                        pair[1]
+
+                    ]);
+
+                }
+            );
+
+        }
+    );
+
+
+    const wsDivergencias =
+        XLSX.utils.aoa_to_sheet(
+            divergenceRows
+        );
+
+
+    XLSX.utils.book_append_sheet(
+        workbook,
+        wsDivergencias,
+        "Divergencias"
+    );
+
+
+    XLSX.writeFile(
+        workbook,
+        "analise_planilhas.xlsx"
+    );
+
+}
+
+
+/* =========================================================
+   EXPORTAR PDF
+========================================================= */
+
+document.getElementById(
+    "exportPdf"
+).addEventListener(
+    "click",
+    exportPDF
+);
+
+
+function exportPDF(){
+
+    const {
+        jsPDF
+    } = window.jspdf;
+
+
+    const doc =
+        new jsPDF();
+
+
+    const r =
+        state.result;
+
+
+    let y = 20;
+
+
+    doc.setFontSize(18);
+
+    doc.text(
+        "Relatório de Análise de Planilhas",
+        15,
+        y
+    );
+
+
+    y += 12;
+
+    doc.setFontSize(11);
+
+
+    const lines = [
+
+        `Arquivos: ${state.files.length}`,
+
+        `Registros lidos: ${r.totalRows}`,
+
+        `Registros únicos: ${r.uniqueRows}`,
+
+        `Duplicados: ${r.duplicates}`,
+
+        `Novos: ${r.newCount}`,
+
+        `Removidos: ${r.removedCount}`,
+
+        `Alterados: ${r.changedCount}`,
+
+        `Divergências: ${r.divergentCount}`,
+
+        `Células vazias: ${r.emptyCells}`,
+
+        `Registros sem chave: ${r.noKeyRows}`,
+
+        `Qualidade: ${r.quality.toFixed(1)}%`
+
+    ];
+
+
+    lines.forEach(
+        line => {
+
+            if(y > 275){
+
+                doc.addPage();
+
+                y = 20;
+
+            }
+
+            doc.text(
+                line,
+                15,
+                y
+            );
+
+            y += 8;
+
+        }
+    );
+
+
+    y += 8;
+
+
+    doc.setFontSize(14);
+
+    doc.text(
+        "Resumo",
+        15,
+        y
+    );
+
+
+    y += 9;
+
+
+    doc.setFontSize(10);
+
+
+    const summary =
+        `Foram analisados ${state.files.length} arquivos, ` +
+        `com ${r.totalRows} registros lidos e ` +
+        `${r.uniqueRows} registros únicos. ` +
+        `${r.divergentCount} divergências foram encontradas.`;
+
+
+    const wrapped =
+        doc.splitTextToSize(
+            summary,
+            180
+        );
+
+
+    doc.text(
+        wrapped,
+        15,
+        y
+    );
+
+
+    doc.save(
+        "relatorio_analise_planilhas.pdf"
+    );
+
+}
+
+
+/* =========================================================
+   DOWNLOAD
+========================================================= */
+
+function downloadBlob(
+    blob,
+    filename
+){
+
+    const url =
+        URL.createObjectURL(blob);
+
+
+    const a =
+        document.createElement("a");
+
+
+    a.href = url;
+
+    a.download =
+        filename;
+
+
+    document.body.appendChild(a);
+
+    a.click();
+
+    a.remove();
+
+
+    setTimeout(
+        () =>
+            URL.revokeObjectURL(url),
+        1000
+    );
+
+}
+
+
+/* =========================================================
+   INICIALIZAÇÃO
+========================================================= */
+
+renderFileList();
+
+</script>
+
+</body>
+</html>
